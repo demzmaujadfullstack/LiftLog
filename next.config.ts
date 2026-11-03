@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // cacheComponents dimatikan: next-auth (Auth.js) membaca cookies() di banyak
+  // segmen; pola Suspense wajib per-route belum didukung adapter-nya.
+  cacheComponents: false,
   reactCompiler: true,
   turbopack: {
     rules: {
