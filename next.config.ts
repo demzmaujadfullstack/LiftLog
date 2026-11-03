@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   // segmen; pola Suspense wajib per-route belum didukung adapter-nya.
   cacheComponents: false,
   reactCompiler: true,
+  experimental: {
+    serverActions: {
+      // default 1MB terlalu kecil untuk foto progres (batas aplikasi 10MB + overhead multipart)
+      bodySizeLimit: "12mb",
+    },
+  },
   turbopack: {
     rules: {
       "*.css": {

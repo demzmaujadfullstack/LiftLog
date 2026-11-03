@@ -57,14 +57,19 @@ export function UploadPhotoModal({ open, onClose }: { open: boolean; onClose: ()
     fd.set("angle", angle);
     fd.set("takenAt", takenAt);
     fd.set("notes", notes.trim());
-    const r = await uploadPhotoAction(fd);
-    setSaving(false);
-    if (r.ok) {
-      toast("Foto progres diunggah.");
-      pick(null);
-      onClose();
-      router.refresh();
-    } else setError(r.error ?? "Gagal mengunggah foto.");
+    try {
+      const r = await uploadPhotoAction(fd);
+      if (r.ok) {
+        toast("Foto progres diunggah.");
+        pick(null);
+        onClose();
+        router.refresh();
+      } else setError(r.error ?? "Gagal mengunggah foto.");
+    } catch {
+      setError("Server menolak unggahan. Coba gambar lebih kecil atau hubungi admin.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
