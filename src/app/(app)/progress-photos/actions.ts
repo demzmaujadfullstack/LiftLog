@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { progressPhotoSchema } from "@/lib/validations";
-import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, getStorageDriver } from "@/lib/storage";
+import {
+  ALLOWED_IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+  getStorageDriver,
+  StorageNotConfiguredError,
+  type StoredObject,
+} from "@/lib/storage";
 
 export type PhotoActionResult = { ok: boolean; error?: string };
 
@@ -33,7 +39,19 @@ export async function uploadPhotoAction(formData: FormData): Promise<PhotoAction
   if (count >= 200) return { ok: false, error: "Maksimal 200 foto. Hapus yang lama dulu." };
 
   const buf = Buffer.from(await file.arrayBuffer());
-  const stored = await getStorageDriver().put(user.id, buf, file.type);
+  let stored: StoredObject;
+  try {
+    stored = await getStorageDriver().put(user.id, buf, file.type);
+  } catch (e) {
+    if (e instanceof StorageNotConfiguredError) {
+      return {
+        ok: false,
+        error:
+          "Penyimpanan foto belum aktif di server. Admin harus menambahkan BLOB_READ_WRITE_TOKEN lalu deploy ulang.",
+      };
+    }
+    return { ok: false, error: "Gagal menyimpan gambar ke penyimpanan. Coba lagi atau gunakan ukuran lebih kecil." };
+  }
 
   await prisma.progressPhoto.create({
     data: {
@@ -56,7 +74,11 @@ export async function deletePhotoAction(id: string): Promise<PhotoActionResult> 
   if (!photo) return { ok: false, error: "Foto tidak ditemukan." };
 
   await prisma.progressPhoto.delete({ where: { id } });
-  if (photo.storageKey) await getStorageDriver().delete(photo.storageKey);
+  try {
+    if (photo.storageKey) await getStorageDriver().delete(photo.storageKey);
+  } catch {
+    // baris DB sudah terhapus; aset yatim dibersihkan manual
+  }
 
   revalidatePath("/progress-photos");
   return { ok: true };

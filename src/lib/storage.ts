@@ -49,6 +49,13 @@ const localDriver: StorageDriver = {
   },
 };
 
+export class StorageNotConfiguredError extends Error {
+  constructor() {
+    super("Penyimpanan awan belum dikonfigurasi di server ini.");
+    this.name = "StorageNotConfiguredError";
+  }
+}
+
 const blobDriver: StorageDriver = {
   name: "blob",
   async put(userId, data, contentType) {
@@ -73,5 +80,8 @@ const blobDriver: StorageDriver = {
 };
 
 export function getStorageDriver(): StorageDriver {
-  return process.env.BLOB_READ_WRITE_TOKEN ? blobDriver : localDriver;
+  if (process.env.BLOB_READ_WRITE_TOKEN) return blobDriver;
+  // Filesystem Vercel read-only: menuliskan ke public/uploads pasti ENOENT/EROFS.
+  if (process.env.VERCEL) throw new StorageNotConfiguredError();
+  return localDriver;
 }
